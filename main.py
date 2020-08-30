@@ -20,9 +20,11 @@ class Game:
 
     def load_data(self):
         # location of .py files 
+        # define some folders where files are stored 
         game_folder = path.dirname('__file__')
         img_folder = path.join(game_folder, 'img')
-        self.map = Map(path.join(game_folder, 'map3.txt'))
+        map_folder = path.join(game_folder, 'maps')
+        self.map = Map(path.join(map_folder, 'map3.txt'))
         # load the player image sprite 
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         # load the wall image sprite
