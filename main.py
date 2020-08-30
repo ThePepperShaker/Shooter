@@ -1,4 +1,5 @@
 # KidsCanCode - Game Development with Pygame video series - Tile Based Game
+# Art from kenney - https://kenney.nl/assets/topdown-shooter
 
 import pygame as pg
 import sys
@@ -20,7 +21,9 @@ class Game:
     def load_data(self):
         # location of .py files 
         game_folder = path.dirname('__file__')
-        self.map = Map(path.join(game_folder, 'bigger_map.txt'))
+        img_folder = path.join(game_folder, 'img')
+        self.map = Map(path.join(game_folder, 'map3.txt'))
+        self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
 
 
     def new(self):
