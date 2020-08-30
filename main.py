@@ -23,13 +23,22 @@ class Game:
         game_folder = path.dirname('__file__')
         img_folder = path.join(game_folder, 'img')
         self.map = Map(path.join(game_folder, 'map3.txt'))
+        # load the player image sprite 
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
-
+        # load the wall image sprite
+        self.wall_img = pg.image.load(path.join(img_folder, WALL_IMG)).convert_alpha()
+        # Resize the image to the appropriate size 
+        self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
+        # load the mob image sprite 
+        self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
 
     def new(self):
         # initialize all variables and do all the setup for a new game
         self.all_sprites = pg.sprite.Group()
+        # Walls group 
         self.walls = pg.sprite.Group()
+        # Mobs group 
+        self.mobs = pg.sprite.Group()
         # spawn walls from map.txt file 
         # enumerate returns the index and the item of a list
         for row, tiles in enumerate(self.map.data):
@@ -40,6 +49,9 @@ class Game:
                 # If there is a 'p' on the map, spawn a player
                 if tile == 'P':
                     self.player = Player(self, col, row)
+                # If there is a 'M' on the map, spawn a mob 
+                if tile == 'M':
+                    self.mob = Mob(self, col, row)
         self.camera = Camera(self.map.width, self.map.height)
 
 
@@ -69,10 +81,13 @@ class Game:
             pg.draw.line(self.screen, LIGHTGREY, (0, y), (WIDTH, y))
 
     def draw(self):
+        pg.display.set_caption('{:.2f}'.format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
-        self.draw_grid()
+        # Draw the grid 
+        # self.draw_grid()
         for sprite in self.all_sprites:
             self.screen.blit(sprite.image, self.camera.apply(sprite))
+        
         pg.display.flip()
 
     def events(self):

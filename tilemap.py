@@ -1,6 +1,11 @@
 import pygame as pg 
 from settings import * 
 
+
+# Create a function which supports rect and hit_rect interactions 
+def collide_hit_rect(one,two):
+    return one.hit_rect.colliderect(two.rect)
+
 class Map: 
     def __init__(self, filename):
         self.data = []

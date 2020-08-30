@@ -1,5 +1,6 @@
 import pygame as pg
 from settings import *
+from tilemap import collide_hit_rect
 # Use vectors for a number of variables 
 vec = pg.math.Vector2 
 
@@ -10,6 +11,9 @@ class Player(pg.sprite.Sprite):
         self.game = game
         self.image = game.player_img
         self.rect = self.image.get_rect()
+        # Define the hit rect for collisions separately 
+        self.hit_rect = PLAYER_HIT_RECT
+        self.hit_rect.center = self.rect.center
         # store x and y velocity
         self.vel = vec(0, 0)
         # store the actual x and y position 
@@ -34,25 +38,25 @@ class Player(pg.sprite.Sprite):
 
     def collide_with_walls(self, dir):
         if dir == 'x':
-            # check for collision with walls 
-            hits = pg.sprite.spritecollide(self, self.game.walls, False)
+            # check for collision with walls if moving in the x direction
+            hits = pg.sprite.spritecollide(self, self.game.walls, False, collide_hit_rect)
             if hits: 
                 if self.vel.x > 0: 
-                    self.pos.x = hits[0].rect.left - self.rect.width 
+                    self.pos.x = hits[0].rect.left - self.hit_rect.width / 2
                 if self.vel.x < 0: 
-                    self.pos.x = hits[0].rect.right 
+                    self.pos.x = hits[0].rect.right + self.hit_rect.width / 2
                 self.vel.x = 0 
-                self.rect.x = self.pos.x 
+                self.hit_rect.centerx = self.pos.x 
         if dir == 'y':
-            # check for collision with walls 
-            hits = pg.sprite.spritecollide(self, self.game.walls, False)
+            # check for collision with walls if moving in y direction
+            hits = pg.sprite.spritecollide(self, self.game.walls, False, collide_hit_rect)
             if hits: 
                 if self.vel.y > 0: 
-                    self.pos.y = hits[0].rect.top - self.rect.height 
+                    self.pos.y = hits[0].rect.top - self.hit_rect.height /2
                 if self.vel.y < 0: 
-                    self.pos.y = hits[0].rect.bottom 
+                    self.pos.y = hits[0].rect.bottom + self.hit_rect.width / 2
                 self.vel.y = 0 
-                self.rect.y = self.pos.y 
+                self.hit_rect.centery = self.pos.y 
 
 
     def update(self):
@@ -66,24 +70,50 @@ class Player(pg.sprite.Sprite):
         self.rect.center = self.pos 
         # Update position 
         self.pos += self.vel * self.game.dt
-        # Check to see if the player collide with any wall - check on each axis 
-        self.rect.centerx = self.pos.x 
+        # Check to see if the player collide with any wall - check on each axis on the hit rect
+        self.hit_rect.centerx = self.pos.x 
         self.collide_with_walls('x')
-        self.rect.centery = self.pos.y 
+        self.hit_rect.centery = self.pos.y 
         self.collide_with_walls('y')
+        self.rect.center = self.hit_rect.center
 
+class Mob(pg.sprite.Sprite):
+    '''
+    Defines all the mobs and their movement and actions
+    '''
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites, game.mobs
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_img
+        self.rect = self.image.get_rect()
+        self.pos = vec(x,y) * TILESIZE
+        self.rect.center = self.pos
+        self.rot = 0 
+    
+    def update(self):
+        # Need to find out where the player is and rotate towards that position
+        self.rot = (self.game.player.pos - self.pos).angle_to(vec(1,0))
+        # rotate that image by the angle self.rot
+        self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos 
 
 class Wall(pg.sprite.Sprite):
+    '''
+    Class for all wall sprites 
+    '''
     def __init__(self, game, x, y):
         self.groups = game.all_sprites, game.walls
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = pg.Surface((TILESIZE, TILESIZE))
-        self.image.fill(GREEN)
+        self.image = game.wall_img
         self.rect = self.image.get_rect()
         self.x = x
         self.y = y
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
     
+
+
 
