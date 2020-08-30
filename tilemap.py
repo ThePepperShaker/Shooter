@@ -32,9 +32,9 @@ class Camera:
     
     def update(self, target):
         # Shift x, if player moves to the right, the offset should move to the left 
-        x = -target.rect.x + int(WIDTH / 2)
+        x = -target.rect.centerx + int(WIDTH / 2)
         # Shift y 
-        y = -target.rect.y + int(HEIGHT / 2)
+        y = -target.rect.centery + int(HEIGHT / 2)
 
         # limit scrolling to map size
         x = min(0, x) # left

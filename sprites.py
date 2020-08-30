@@ -10,22 +10,25 @@ class Player(pg.sprite.Sprite):
         self.game = game
         self.image = game.player_img
         self.rect = self.image.get_rect()
+        # store x and y velocity
         self.vel = vec(0, 0)
+        # store the actual x and y position 
         self.pos = vec(x,y) * TILESIZE
+        # rotation 
+        self.rot = 0 
     
     def get_keys(self):
+        self.rot_speed = 0 
         self.vel = vec(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT] or keys[pg.K_a]:
-            self.vel.x = -PLAYER_SPEED
+            self.rot_speed = PLAYER_ROT_SPEED
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
-            self.vel.x = PLAYER_SPEED
+            self.rot_speed = -PLAYER_ROT_SPEED
         if keys[pg.K_UP] or keys[pg.K_w]:
-            self.vel.y = -PLAYER_SPEED
+            self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot)
         if keys[pg.K_DOWN] or keys[pg.K_s]:
-            self.vel.y = PLAYER_SPEED
-        if self.vel.x != 0 and self.vel.y != 0: 
-            self.vel *= 0.7071 
+            self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
             
 
 
@@ -54,11 +57,19 @@ class Player(pg.sprite.Sprite):
 
     def update(self):
         self.get_keys()
+        # Update rotation - If rotate 360, change it back to 1
+        self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
+        # Rotate the image - we have to keep track of new rect
+        self.image = pg.transform.rotate(self.game.player_img, self.rot)
+        # new rectangle 
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos 
+        # Update position 
         self.pos += self.vel * self.game.dt
         # Check to see if the player collide with any wall - check on each axis 
-        self.rect.x = self.pos.x 
+        self.rect.centerx = self.pos.x 
         self.collide_with_walls('x')
-        self.rect.y = self.pos.y 
+        self.rect.centery = self.pos.y 
         self.collide_with_walls('y')
 
 
