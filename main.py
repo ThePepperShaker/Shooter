@@ -1,4 +1,4 @@
-# KidsCanCode - Game Development with Pygame video series - Tile Based Game
+# Game Development with Pygame video series - Tile Based Game
 # Art from kenney - https://kenney.nl/assets/topdown-shooter
 
 import pygame as pg
@@ -33,6 +33,8 @@ class Game:
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
         # load the mob image sprite 
         self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
+        # load the bullet image sprite 
+        self.bullet_img = pg.image.load(path.join(img_folder, BULLET_IMG)).convert_alpha()
 
     def new(self):
         # initialize all variables and do all the setup for a new game
@@ -41,6 +43,8 @@ class Game:
         self.walls = pg.sprite.Group()
         # Mobs group 
         self.mobs = pg.sprite.Group()
+        # Bullet group 
+        self.bullets = pg.sprite.Group()
         # spawn walls from map.txt file 
         # enumerate returns the index and the item of a list
         for row, tiles in enumerate(self.map.data):
@@ -75,6 +79,10 @@ class Game:
         # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
+        # bullets kill mobs 
+        hits = self.groupcollide(self.mobs, self.bullets, False, True)
+        for hit in hits:
+            hit.kill()
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
