@@ -25,6 +25,7 @@ GRIDWIDTH = WIDTH / TILESIZE
 GRIDHEIGHT = HEIGHT / TILESIZE 
 
 # Player settings 
+PLAYER_HEALTH = 100
 PLAYER_SPEED = 300
 PLAYER_ROT_SPEED = 250 
 PLAYER_IMG = 'hitman1_gun.png'
@@ -37,13 +38,16 @@ BULLET_SPEED = 500
 BULLET_LIFETIME = 1000 
 BULLET_RATE = 150 
 KICKBACK = 200 
-# Gun is not 100% accurate 
 GUN_SPREAD = 5
+BULLET_DAMAGE = 20 
 
 # Mob settings 
 MOB_IMG = 'zombie1_hold.png'
 MOB_SPEED = 100
 MOB_HIT_RECT = pg.Rect(0, 0 , 30, 30)
+MOB_HEALTH = 100 
+MOB_DAMAGE = 10
+MOB_KNOCKBACK = 20
 
 # Wall settings 
 WALL_IMG = 'tileGreen_39.png'
