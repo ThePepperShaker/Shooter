@@ -42,7 +42,9 @@ class Game:
         game_folder = path.dirname('__file__')
         img_folder = path.join(game_folder, 'img')
         map_folder = path.join(game_folder, 'maps')
-        self.map = Map(path.join(map_folder, 'map3.txt'))
+        self.map = TiledMap(path.join(map_folder, 'level1.tmx'))
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
         # load the player image sprite 
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         # load the wall image sprite
@@ -65,17 +67,19 @@ class Game:
         self.bullets = pg.sprite.Group()
         # spawn walls from map.txt file 
         # enumerate returns the index and the item of a list
-        for row, tiles in enumerate(self.map.data):
-            # enumerate on each string
-            for col, tile in enumerate(tiles):
-                if tile == '1':
-                    Wall(self, col, row)
-                # If there is a 'p' on the map, spawn a player
-                if tile == 'P':
-                    self.player = Player(self, col, row)
-                # If there is a 'M' on the map, spawn a mob 
-                if tile == 'M':
-                    self.mob = Mob(self, col, row)
+        # for row, tiles in enumerate(self.map.data):
+        #     # enumerate on each string
+        #     for col, tile in enumerate(tiles):
+        #         if tile == '1':
+        #             Wall(self, col, row)
+        #         # If there is a 'p' on the map, spawn a player
+        #         if tile == 'P':
+        #             self.player = Player(self, col, row)
+        #         # If there is a 'M' on the map, spawn a mob 
+        #         if tile == 'M':
+        #             self.mob = Mob(self, col, row)
+        # Spawn the player at topleft
+        self.player = Player(self, 5, 5)
         self.camera = Camera(self.map.width, self.map.height)
 
 
@@ -122,7 +126,8 @@ class Game:
 
     def draw(self):
         pg.display.set_caption('{:.2f}'.format(self.clock.get_fps()))
-        self.screen.fill(BGCOLOR)
+        # self.screen.fill(BGCOLOR)
+        self.screen.blit(self.map_img, self.camera.apply_rect(self.map_rect))
         # Draw the grid 
         # self.draw_grid()
         for sprite in self.all_sprites:

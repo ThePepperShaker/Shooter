@@ -1,7 +1,7 @@
 import pygame as pg 
 from settings import * 
+import pytmx
 
-‚
 # Create a function which supports rect and hit_rect interactions 
 def collide_hit_rect(one,two):
     return one.hit_rect.colliderect(two.rect)
@@ -19,6 +19,27 @@ class Map:
         self.width = self.tilewidth * TILESIZE 
         self.height = self.tileheight * TILESIZE 
 
+class TiledMap: 
+    def __init__(self, filename):
+        tm = pytmx.load_pygame(filename, pixelalpha=True)
+        self.width = tm.width * tm.tilewidth 
+        self.height = tm.height * tm.tileheight
+        self.tmxdata = tm 
+    
+    def render(self, surface):
+        ti = self.tmxdata.get_tile_image_by_gid 
+        for layer in self.tmxdata.visible_layers:
+            if isinstance(layer, pytmx.TiledTileLayer):
+                for x, y, gid, in layer: 
+                    tile = ti(gid)
+                    if tile:
+                        surface.blit(tile, (x * self.tmxdata.tilewidth, 
+                                            y * self.tmxdata.tileheight))
+
+    def make_map(self):
+        temp_surface = pg.Surface((self.width, self.height))
+        self.render(temp_surface)
+        return temp_surface 
 
 class Camera: 
     '''
@@ -32,8 +53,14 @@ class Camera:
         self.height = height 
         
     def apply(self, entity):
+        # applies to sprites 
         # move command shifts rectangle by the input amount
         return entity.rect.move(self.camera.topleft)
+    
+    def apply_rect(self, rect):
+        # Applies to rectangle
+        # Takes a rectangle instead of a sprite. and returns the rectangle moved by camera offset 
+        return rect.move(self.camera.topleft)
     
     def update(self, target):
         # Shift x, if player moves to the right, the offset should move to the left 
