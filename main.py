@@ -42,7 +42,7 @@ class Game:
         game_folder = path.dirname('__file__')
         img_folder = path.join(game_folder, 'img')
         map_folder = path.join(game_folder, 'maps')
-        self.map = TiledMap(path.join(map_folder, 'level1.tmx'))
+        self.map = TiledMap(path.join(map_folder, 'level1_pls.tmx'))
         self.map_img = self.map.make_map()
         self.map_rect = self.map_img.get_rect()
         # load the player image sprite 
@@ -78,9 +78,15 @@ class Game:
         #         # If there is a 'M' on the map, spawn a mob 
         #         if tile == 'M':
         #             self.mob = Mob(self, col, row)
-        # Spawn the player at topleft
-        self.player = Player(self, 5, 5)
+        for tile_object in self.map.tmxdata.objects: 
+            if tile_object.name == 'player':
+                self.player = Player(self, tile_object.x, tile_object.y)
+            if tile_object.name == 'wall':
+                Obstacle(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
+            if tile_object.name == 'zombie':
+                Mob(self,tile_object.x, tile_object.y)
         self.camera = Camera(self.map.width, self.map.height)
+        self.draw_debug = False 
 
 
     def run(self):
@@ -134,6 +140,11 @@ class Game:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
+            if self.draw_debug:
+                pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(sprite.hit_rect),1)
+        if self.draw_debug:
+            for wall in self.walls: 
+                pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect),1)
         # HUD functions 
         draw_player_heath(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
         pg.display.flip()
@@ -146,6 +157,8 @@ class Game:
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit()
+                if event.key == pg.K_h:
+                    self.draw_debug = not self.draw_debug
 
     def show_start_screen(self):
         pass
