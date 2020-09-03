@@ -1,5 +1,5 @@
 import pygame as pg
-from random import uniform, choice, randint
+from random import uniform, choice, randint, random
 from settings import *
 from tilemap import collide_hit_rect
 import pytweening as tween
@@ -71,6 +71,7 @@ class Player(pg.sprite.Sprite):
                 pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
                 Bullet(self.game, pos, direc)
                 self.vel = vec(-KICKBACK, 0).rotate(-self.rot)
+                choice(self.game.weapon_sounds['gun']).play()
                 # Spawn a muzzle flash where the bullet is 
                 MuzzleFlash(self.game, pos)
 
@@ -100,69 +101,65 @@ class Player(pg.sprite.Sprite):
 
 
 class Mob(pg.sprite.Sprite):
-    '''
-    Defines all the mobs and their movement and actions
-    '''
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.mob_img
+        self.image = game.mob_img.copy()
         self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
         self.hit_rect = MOB_HIT_RECT.copy()
         self.hit_rect.center = self.rect.center
-        self.pos = vec(x,y)
-        # add velocity and acceleration vectors for the mobs 
-        self.vel = vec(0,0)
-        self.acc = vec(0,0)
+        self.pos = vec(x, y)
+        self.vel = vec(0, 0)
+        self.acc = vec(0, 0)
         self.rect.center = self.pos
-        self.rot = 0 
+        self.rot = 0
         self.health = MOB_HEALTH
-        self.speed = choice(MOB_SPEED)
-    
+        self.speed = choice(MOB_SPEEDS)
+        self.target = game.player
+
     def avoid_mobs(self):
         for mob in self.game.mobs:
-            if mob != self: 
+            if mob != self:
                 dist = self.pos - mob.pos
-                if 0 < dist.length() < AVOID_RADIUS: 
+                if 0 < dist.length() < AVOID_RADIUS:
                     self.acc += dist.normalize()
 
-    
     def update(self):
-        # Need to find out where the player is and rotate towards that position
-        self.rot = (self.game.player.pos - self.pos).angle_to(vec(1,0))
-        # rotate that image by the angle self.rot
-        self.image = pg.transform.rotate(self.game.mob_img, self.rot)
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos 
-        self.acc = vec(1, 0).rotate(-self.rot)
-        self.avoid_mobs()
-        self.acc.scale_to_length(self.speed)
-        # add some friction based on how fast he is going 
-        self.acc += self.vel * - 1
-        self.vel += self.acc * self.game.dt
-        # From equations of motion 
-        self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
-        self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.walls, 'x')
-        self.hit_rect.centery = self.pos.y 
-        collide_with_walls(self, self.game.walls, 'y')
-        self.rect.center = self.hit_rect.center
-        if self.health <= 0: 
+        target_dist = self.target.pos - self.pos
+        if target_dist.length_squared() < DETECT_RADIUS**2:
+            if random() < 0.002:
+                choice(self.game.zombie_moan_sounds).play()
+            self.rot = target_dist.angle_to(vec(1, 0))
+            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.rect.center = self.pos
+            self.acc = vec(1, 0).rotate(-self.rot)
+            self.avoid_mobs()
+            self.acc.scale_to_length(self.speed)
+            self.acc += self.vel * -1
+            self.vel += self.acc * self.game.dt
+            self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.rect.center = self.hit_rect.center
+        if self.health <= 0:
+            choice(self.game.zombie_hit_sounds).play()
             self.kill()
-    
+
     def draw_health(self):
-        # Green when full, Red when low, yellow when medium 
-        if self.health > 60: 
-            col = GREEN 
-        elif self.health > 30: 
-            col = YELLOW 
+        if self.health > 60:
+            col = GREEN
+        elif self.health > 30:
+            col = YELLOW
         else:
             col = RED
-        width = int(self.rect.width * self.health / 100)
+        width = int(self.rect.width * self.health / MOB_HEALTH)
         self.health_bar = pg.Rect(0, 0, width, 7)
-        if self.health < 100: 
+        if self.health < MOB_HEALTH:
             pg.draw.rect(self.image, col, self.health_bar)
 
 class Bullet(pg.sprite.Sprite):
