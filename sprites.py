@@ -1,5 +1,5 @@
 import pygame as pg
-from random import uniform
+from random import uniform, choice, randint
 from settings import *
 from tilemap import collide_hit_rect
 # Use vectors for a number of variables 
@@ -29,6 +29,7 @@ def collide_with_walls(sprite, group, dir):
 
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
+        self._layer = PLAYER_LAYER
         self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -69,31 +70,10 @@ class Player(pg.sprite.Sprite):
                 pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
                 Bullet(self.game, pos, direc)
                 self.vel = vec(-KICKBACK, 0).rotate(-self.rot)
+                # Spawn a muzzle flash where the bullet is 
+                MuzzleFlash(self.game, pos)
+
             
-
-    def collide_with_walls(self, dir):
-        if dir == 'x':
-            # check for collision with walls if moving in the x direction
-            hits = pg.sprite.spritecollide(self, self.game.walls, False, collide_hit_rect)
-            if hits: 
-                if self.vel.x > 0: 
-                    self.pos.x = hits[0].rect.left - self.hit_rect.width / 2
-                if self.vel.x < 0: 
-                    self.pos.x = hits[0].rect.right + self.hit_rect.width / 2
-                self.vel.x = 0 
-                self.hit_rect.centerx = self.pos.x 
-        if dir == 'y':
-            # check for collision with walls if moving in y direction
-            hits = pg.sprite.spritecollide(self, self.game.walls, False, collide_hit_rect)
-            if hits: 
-                if self.vel.y > 0: 
-                    self.pos.y = hits[0].rect.top - self.hit_rect.height /2
-                if self.vel.y < 0: 
-                    self.pos.y = hits[0].rect.bottom + self.hit_rect.width / 2
-                self.vel.y = 0 
-                self.hit_rect.centery = self.pos.y 
-
-
     def update(self):
         self.get_keys()
         # Update rotation - If rotate 360, change it back to 1
@@ -117,6 +97,7 @@ class Mob(pg.sprite.Sprite):
     Defines all the mobs and their movement and actions
     '''
     def __init__(self, game, x, y):
+        self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -131,6 +112,15 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.rot = 0 
         self.health = MOB_HEALTH
+        self.speed = choice(MOB_SPEED)
+    
+    def avoid_mobs(self):
+        for mob in self.game.mobs:
+            if mob != self: 
+                dist = self.pos - mob.pos
+                if 0 < dist.length() < AVOID_RADIUS: 
+                    self.acc += dist.normalize()
+
     
     def update(self):
         # Need to find out where the player is and rotate towards that position
@@ -139,7 +129,9 @@ class Mob(pg.sprite.Sprite):
         self.image = pg.transform.rotate(self.game.mob_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos 
-        self.acc = vec(MOB_SPEED, 0).rotate(-self.rot)
+        self.acc = vec(1, 0).rotate(-self.rot)
+        self.avoid_mobs()
+        self.acc.scale_to_length(self.speed)
         # add some friction based on how fast he is going 
         self.acc += self.vel * - 1
         self.vel += self.acc * self.game.dt
@@ -168,6 +160,7 @@ class Mob(pg.sprite.Sprite):
 
 class Bullet(pg.sprite.Sprite):
     def __init__(self, game, pos, direc):
+        self._layer = BULLET_LAYER
         self.groups = game.all_sprites, game.bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game 
@@ -198,6 +191,7 @@ class Wall(pg.sprite.Sprite):
     The old class for wall sprites, when not using Tiled maps 
     '''
     def __init__(self, game, x, y):
+        self._layer = WALL_LAYER
         self.groups = game.all_sprites, game.walls
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
@@ -207,7 +201,6 @@ class Wall(pg.sprite.Sprite):
         self.y = y
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
-    
 
 class Obstacle(pg.sprite.Sprite):
     '''
@@ -225,5 +218,29 @@ class Obstacle(pg.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y 
 
+class MuzzleFlash(pg.sprite.Sprite):
+    def __init__(self, game, pos):
+        self._layer = EFFECTS_LAYER
+        self.groups = game.all_sprites
+        pg.sprite.Sprite.__init__(self,self.groups)
+        self.game = game 
+        size = randint(20,50)
+        self.image = pg.transform.scale(choice(game.gun_flashes), (size,size))
+        self.rect = self.image.get_rect()
+        self.pos = pos
+        self.rect.center = pos 
+        self.spawn_time = pg.time.get_ticks()
 
+    def update(self):
+        if pg.time.get_ticks()- self.spawn_time > FLASH_DURATION:
+            self.kill()
 
+class Item(pg.sprite.Sprite):
+    def __init__(self, game, pos, type):
+        self.groups = game.all_sprites, game.items
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.item_images[type]
+        self.rect = self.image.get_rect()
+        self.type = type 
+        self.rect.center = pos 

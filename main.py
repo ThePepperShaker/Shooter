@@ -55,16 +55,27 @@ class Game:
         self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
         # load the bullet image sprite 
         self.bullet_img = pg.image.load(path.join(img_folder, BULLET_IMG)).convert_alpha()
-
+        # load the gun flashes 
+        self.gun_flashes = []
+        for img in MUZZLE_FLASHES:
+            self.gun_flashes.append(pg.image.load(path.join(img_folder, img)).convert_alpha())
+        # load items 
+        self.item_images = {}
+        for item in ITEM_IMAGES:
+            self.item_images[item] = pg.image.load(path.join(img_folder, ITEM_IMAGES[item])).convert_alpha()
+    
     def new(self):
         # initialize all variables and do all the setup for a new game
-        self.all_sprites = pg.sprite.Group()
+        # Set layers for each group
+        self.all_sprites = pg.sprite.LayeredUpdates()
         # Walls group 
         self.walls = pg.sprite.Group()
         # Mobs group 
         self.mobs = pg.sprite.Group()
         # Bullet group 
         self.bullets = pg.sprite.Group()
+        # Items group 
+        self.items = pg.sprite.Group()
         # spawn walls from map.txt file 
         # enumerate returns the index and the item of a list
         # for row, tiles in enumerate(self.map.data):
@@ -79,12 +90,16 @@ class Game:
         #         if tile == 'M':
         #             self.mob = Mob(self, col, row)
         for tile_object in self.map.tmxdata.objects: 
+            object_center = vec(tile_object.y + tile_object.width / 2, 
+                                tile_object.y + tile_object.height / 2)
             if tile_object.name == 'player':
-                self.player = Player(self, tile_object.x, tile_object.y)
+                self.player = Player(self, object_center.x, object_center.y)
             if tile_object.name == 'wall':
                 Obstacle(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'zombie':
-                Mob(self,tile_object.x, tile_object.y)
+                Mob(self,object_center.x, object_center.y)
+            if tile_object.name in ['health']:
+                Item(self,object_center,tile_object.name)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False 
 
