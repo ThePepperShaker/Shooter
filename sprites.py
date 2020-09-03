@@ -92,6 +92,12 @@ class Player(pg.sprite.Sprite):
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
 
+    def add_health(self, amount):
+        self.health += amount 
+        if self.health > PLAYER_HEALTH: 
+            self.health = PLAYER_HEALTH
+
+
 class Mob(pg.sprite.Sprite):
     '''
     Defines all the mobs and their movement and actions
@@ -236,11 +242,12 @@ class MuzzleFlash(pg.sprite.Sprite):
             self.kill()
 
 class Item(pg.sprite.Sprite):
-    def __init__(self, game, pos, type):
+    def __init__(self, game, pos, type_of):
+        self._layer = ITEMS_LAYER 
         self.groups = game.all_sprites, game.items
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.item_images[type]
+        self.image = game.item_images[type_of]
         self.rect = self.image.get_rect()
-        self.type = type 
+        self.type = type_of 
         self.rect.center = pos 
