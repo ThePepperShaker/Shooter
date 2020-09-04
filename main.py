@@ -81,15 +81,14 @@ class Game:
         # define some folders where files are stored 
         game_folder = path.dirname('__file__')
         img_folder = path.join(game_folder, 'img')
-        map_folder = path.join(game_folder, 'maps')
+        self.map_folder = path.join(game_folder, 'maps')
         snd_folder = path.join(game_folder, 'snd')
         music_folder = path.join(game_folder, 'music')
         self.title_font = path.join(img_folder, 'ZOMBIE.TTF')
+        self.hud_font = path.join(img_folder, 'Impacted2.0.ttf')
         self.dim_screen = pg.Surface(self.screen.get_size()).convert_alpha()
         self.dim_screen.fill((0,0,0,180))
-        self.map = TiledMap(path.join(map_folder, 'level1_pls.tmx'))
-        self.map_img = self.map.make_map()
-        self.map_rect = self.map_img.get_rect()
+        
         # load the player image sprite 
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         # load the wall image sprite
@@ -165,6 +164,10 @@ class Game:
         #         # If there is a 'M' on the map, spawn a mob 
         #         if tile == 'M':
         #             self.mob = Mob(self, col, row)
+        # Map 
+        self.map = TiledMap(path.join(self.map_folder, 'level1_pls.tmx'))
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
         for tile_object in self.map.tmxdata.objects: 
             obj_center = vec(tile_object.x + tile_object.width / 2, tile_object.y + tile_object.height / 2)
             if tile_object.name == 'player':
@@ -201,6 +204,9 @@ class Game:
         # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
+        # game over 
+        if len(self.mobs) == 0: 
+            self.playing = False
         # The player hits item 
         hits = pg.sprite.spritecollide(self.player, self.items, False)
         for hit in hits:
@@ -229,9 +235,11 @@ class Game:
         # bullets kill mobs 
         # hits is a dictionary that stores keys as mobs and values as bullets
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
-        for hit in hits:
-            hit.health -= WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
-            hit.vel = vec(0,0)
+        for mob in hits:
+            # hit.health -= WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
+            for bullet in hits[mob]:
+                mob.health -= bullet.damage
+            mob.vel = vec(0,0)
         
 
     def draw_grid(self):
@@ -257,6 +265,7 @@ class Game:
                 pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect),1)
         # HUD functions 
         draw_player_heath(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
+        self.draw_text('Zombies: {}'.format(len(self.mobs)), self.hud_font, 30, WHITE, WIDTH - 10, 10, align='ne')
         draw_mob_radar(self,self.screen, 10, 30)
         if self.paused:
             self.screen.blit(self.dim_screen, (0,0))
@@ -280,7 +289,23 @@ class Game:
         pass
 
     def show_go_screen(self):
-        pass
+        self.screen.fill(BLACK)
+        self.draw_text('GAME OVER', self.title_font, 100, RED, WIDTH/2, HEIGHT/2, align='center')
+        self.draw_text('Press a key to start', self.title_font, 75, RED, WIDTH/2, HEIGHT*(3/4), align='center')
+        pg.display.flip()
+        self.wait_for_key()
+    
+    def wait_for_key(self):
+        pg.event.wait()
+        waiting = True 
+        while waiting: 
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False 
+                    self.quit()
+                if event.type == pg.KEYUP:
+                    waiting = False
 
 # create the game object
 g = Game()
