@@ -32,8 +32,25 @@ PLAYER_IMG = 'hitman1_gun.png'
 PLAYER_HIT_RECT = pg.Rect(0, 0, 35, 35)
 BARREL_OFFSET = vec(30, 10)
 
-# Gun settings 
+# Weapon settings 
 BULLET_IMG = 'bullet.png'
+WEAPONS = {}
+WEAPONS['pistol'] = {'bullet-speed':500,
+                     'bullet-lifetime':1000,
+                     'rate':300,
+                     'kickback':200,
+                     'spread':5,
+                     'damage':10,
+                     'bullet_size':'lg',
+                     'bullet_count':1}
+WEAPONS['shotgun'] = {'bullet-speed':400,
+                     'bullet-lifetime':500,
+                     'rate':900,
+                     'kickback':300,
+                     'spread':20,
+                     'damage':5,
+                     'bullet_size':'sm',
+                     'bullet_count':12}
 BULLET_SPEED = 500 
 BULLET_LIFETIME = 1000 
 BULLET_RATE = 150 
@@ -57,6 +74,8 @@ WALL_IMG = 'tileGreen_39.png'
 # Effects 
 MUZZLE_FLASHES = ['whitePuff15.png', 'whitePuff16.png', 'whitePuff17.png', 'whitePuff18.png']
 FLASH_DURATION = 40 
+SPLAT = 'splat green.png'
+DAMAGE_ALPHA = [i for i in range(0,255,25)]
 
 # Layers 
 WALL_LAYER = 1 
@@ -67,17 +86,29 @@ EFFECTS_LAYER = 4
 ITEMS_LAYER = 1
 
 # Items 
-ITEM_IMAGES = {'health': 'health_pack.png'}
+ITEM_IMAGES = {'health': 'health_pack.png', 
+               'shotgun': 'obj_shotgun.png'}
 HEALTH_PACK_AMOUNT = 20 
 BOB_RANGE = 20
 BOB_SPEED = 0.4
 
 # Sounds 
+# Background music
 BG_MUSIC = 'espionage.ogg'
+# WHen player gets hit sounds
 PLAYER_HIT_SOUNDS = ['pain/8.wav', 'pain/9.wav','pain/10.wav', 'pain/11.wav']
 ZOMBIE_MOAN_SOUNDS = ['brains2.wav', 'brains3.wav', 'zombie-roar-1.wav', 'zombie-roar-2.wav',
                       'zombie-roar-3.wav', 'zombie-roar-5.wav','zombie-roar-6.wav', 'zombie-roar-7.wav']
 ZOMBIE_HIT_SOUNDS = ['splat-15.wav']
-WEAPON_SOUNDS_GUN = ['sfx_weapon_singleshot2.wav']
+# Weapon sounds 
+WEAPON_SOUNDS = {'pistol':['pistol.wav'],
+                 'shotgun':['shotgun.wav']}
 EFFECTS_SOUNDS = {'level_start':'level_start.wav',
-                    'health_up': 'health_pack.wav'}
+                  'health_up': 'health_pack.wav',
+                  'gun_pickup':'gun_pickup.wav'}
+
+# RADAR 
+RADAR_COLOR = LIGHTGREY
+RADAR_WIDTH = 150 
+RADAR_HEIGHT = 90 
+BLIP_RADIUS = 2

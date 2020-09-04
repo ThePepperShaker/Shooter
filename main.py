@@ -28,13 +28,53 @@ def draw_player_heath(surf, x,y, pct):
     pg.draw.rect(surf, col, fill_rect)
     pg.draw.rect(surf,WHITE, outline_rect, 2)
 
+# Mob Radar
+def draw_mob_radar(game, surf, x, y):
+    radar_screen = pg.Surface((RADAR_WIDTH, RADAR_HEIGHT))
+    radar_rect=radar_screen.get_rect()
+    radar_screen.fill(RADAR_COLOR)
+    pg.draw.rect(radar_screen, WHITE, radar_rect, 1)
+    blip_x = int(game.player.rect.centerx * RADAR_WIDTH / game.map.width)
+    blip_y = int(game.player.rect.centery * RADAR_HEIGHT / game.map.height)
+    pg.draw.circle(radar_screen, GREEN, (blip_x, blip_y), BLIP_RADIUS)
+    for mob in game.mobs:
+        blip_x = int(mob.rect.centerx * RADAR_WIDTH / game.map.width)
+        blip_y = int(mob.rect.centery * RADAR_HEIGHT / game.map.height)
+        pg.draw.circle(radar_screen, RED, (blip_x, blip_y), BLIP_RADIUS)
+    surf.blit(radar_screen, (x, y))
+
 class Game:
     def __init__(self):
+        pg.mixer.pre_init(44100, -16, 1, 2048)
         pg.init()
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         self.load_data()
+    
+    def draw_text(self, text, font_name, size, color, x, y, align="nw"):
+        font = pg.font.Font(font_name, size)
+        text_surface = font.render(text, True, color)
+        text_rect = text_surface.get_rect()
+        if align == "nw":
+            text_rect.topleft = (x, y)
+        if align == "ne":
+            text_rect.topright = (x, y)
+        if align == "sw":
+            text_rect.bottomleft = (x, y)
+        if align == "se":
+            text_rect.bottomright = (x, y)
+        if align == "n":
+            text_rect.midtop = (x, y)
+        if align == "s":
+            text_rect.midbottom = (x, y)
+        if align == "e":
+            text_rect.midright = (x, y)
+        if align == "w":
+            text_rect.midleft = (x, y)
+        if align == "center":
+            text_rect.center = (x, y)
+        self.screen.blit(text_surface, text_rect)
 
     def load_data(self):
         # location of .py files 
@@ -44,6 +84,9 @@ class Game:
         map_folder = path.join(game_folder, 'maps')
         snd_folder = path.join(game_folder, 'snd')
         music_folder = path.join(game_folder, 'music')
+        self.title_font = path.join(img_folder, 'ZOMBIE.TTF')
+        self.dim_screen = pg.Surface(self.screen.get_size()).convert_alpha()
+        self.dim_screen.fill((0,0,0,180))
         self.map = TiledMap(path.join(map_folder, 'level1_pls.tmx'))
         self.map_img = self.map.make_map()
         self.map_rect = self.map_img.get_rect()
@@ -51,12 +94,17 @@ class Game:
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         # load the wall image sprite
         self.wall_img = pg.image.load(path.join(img_folder, WALL_IMG)).convert_alpha()
+        # load the splat image 
+        self.splat =  pg.image.load(path.join(img_folder, SPLAT)).convert_alpha()
+        self.splat = pg.transform.scale(self.splat, (64,64))
         # Resize the image to the appropriate size 
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
         # load the mob image sprite 
         self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
-        # load the bullet image sprite 
-        self.bullet_img = pg.image.load(path.join(img_folder, BULLET_IMG)).convert_alpha()
+        # load the bullet imagea sprite 
+        self.bullet_images = {}
+        self.bullet_images['lg'] = pg.image.load(path.join(img_folder, BULLET_IMG)).convert_alpha()
+        self.bullet_images['sm'] = pg.transform.scale(self.bullet_images['lg'], (10,10))
         # load the gun flashes 
         self.gun_flashes = []
         for img in MUZZLE_FLASHES:
@@ -72,9 +120,12 @@ class Game:
             self.effect_sounds[type_of] = pg.mixer.Sound(path.join(snd_folder, EFFECTS_SOUNDS[type_of])) 
         # weapon sounds 
         self.weapon_sounds = {}
-        self.weapon_sounds['gun'] = []
-        for snd in WEAPON_SOUNDS_GUN: 
-            self.weapon_sounds['gun'].append(pg.mixer.Sound(path.join(snd_folder, snd)))
+        for weapon in WEAPON_SOUNDS:
+            self.weapon_sounds[weapon] = []
+            for snd in WEAPON_SOUNDS[weapon]:
+                s = pg.mixer.Sound(path.join(snd_folder, snd))
+                s.set_volume(0.3)
+                self.weapon_sounds[weapon].append(s)
         # zombie sounds 
         self.zombie_moan_sounds = []
         for snd in ZOMBIE_MOAN_SOUNDS: 
@@ -122,10 +173,11 @@ class Game:
                 Obstacle(self, tile_object.x, tile_object.y, tile_object.width, tile_object.height)
             if tile_object.name == 'zombie':
                 Mob(self, obj_center.x, obj_center.y)
-            if tile_object.name in ['health']:
+            if tile_object.name in ['health', 'shotgun']:
                 Item(self,obj_center,tile_object.name)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False 
+        self.paused = False
         self.effect_sounds['level_start'].play()
 
 
@@ -137,7 +189,8 @@ class Game:
             # Divide by 1000 as we want dt in seconds, not milliseconds
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
-            self.update()
+            if not self.paused:
+                self.update()
             self.draw()
 
     def quit(self):
@@ -155,6 +208,10 @@ class Game:
                 hit.kill()
                 self.effect_sounds['health_up'].play()
                 self.player.add_health(HEALTH_PACK_AMOUNT)  
+            if hit.type == 'shotgun':
+                hit.kill()
+                self.effect_sounds['gun_pickup'].play()
+                self.player.weapon = 'shotgun'
         # mob hits player 
         hits = pg.sprite.spritecollide(self.player, self.mobs, False, collide_hit_rect)
         for hit in hits: 
@@ -164,13 +221,16 @@ class Game:
             hit.vel = vec(0,0)
             if self.player.health <= 0: 
                 self.playing = False
+                self.show_go_screen()
         if hits:
+            self.player.hit()
             self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
 
         # bullets kill mobs 
+        # hits is a dictionary that stores keys as mobs and values as bullets
         hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, True)
         for hit in hits:
-            hit.health -= BULLET_DAMAGE 
+            hit.health -= WEAPONS[self.player.weapon]['damage'] * len(hits[hit])
             hit.vel = vec(0,0)
         
 
@@ -197,6 +257,10 @@ class Game:
                 pg.draw.rect(self.screen, GREEN, self.camera.apply_rect(wall.rect),1)
         # HUD functions 
         draw_player_heath(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
+        draw_mob_radar(self,self.screen, 10, 30)
+        if self.paused:
+            self.screen.blit(self.dim_screen, (0,0))
+            self.draw_text('Paused', self.title_font, 105, RED, WIDTH/2, HEIGHT/2, align='center')
         pg.display.flip()
 
     def events(self):
@@ -209,6 +273,8 @@ class Game:
                     self.quit()
                 if event.key == pg.K_h:
                     self.draw_debug = not self.draw_debug
+                if event.key == pg.K_p:
+                    self.paused = not self.paused
 
     def show_start_screen(self):
         pass

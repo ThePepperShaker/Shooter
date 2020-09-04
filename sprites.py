@@ -2,6 +2,7 @@ import pygame as pg
 from random import uniform, choice, randint, random
 from settings import *
 from tilemap import collide_hit_rect
+from itertools import chain
 import pytweening as tween
 # Use vectors for a number of variables 
 vec = pg.math.Vector2 
@@ -47,6 +48,8 @@ class Player(pg.sprite.Sprite):
         self.rot = 0 
         self.last_shot = 0 
         self.health = PLAYER_HEALTH 
+        self.weapon = 'pistol'
+        self.damaged = False
     
     def get_keys(self):
         self.rot_speed = 0 
@@ -62,26 +65,44 @@ class Player(pg.sprite.Sprite):
             self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
         mousestate = pg.mouse.get_pressed()
         if keys[pg.K_SPACE] or mousestate[0]:
-            now = pg.time.get_ticks()
-            if now - self.last_shot > BULLET_RATE:
-                # spawn a bullet 
-                self.last_shot = now 
-                direc = vec(1, 0).rotate(-self.rot)
-                # Offset the bullet to where the gun barrel is 
-                pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
-                Bullet(self.game, pos, direc)
-                self.vel = vec(-KICKBACK, 0).rotate(-self.rot)
-                choice(self.game.weapon_sounds['gun']).play()
-                # Spawn a muzzle flash where the bullet is 
-                MuzzleFlash(self.game, pos)
+            self.shoot()
+        
+    def shoot(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > WEAPONS[self.weapon]['rate']:
+            # spawn a bullet 
+            self.last_shot = now 
+            direc = vec(1, 0).rotate(-self.rot)
+            # Offset the bullet to where the gun barrel is 
+            pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
+            self.vel = vec(-WEAPONS[self.weapon]['kickback'], 0).rotate(-self.rot)
+            for i in range(WEAPONS[self.weapon]['bullet_count']):
+                spread = uniform(-WEAPONS[self.weapon]['spread'],WEAPONS[self.weapon]['spread'])
+                Bullet(self.game, pos, direc.rotate(spread))
+                snd = choice(self.game.weapon_sounds[self.weapon])
+                if snd.get_num_channels() > 2:
+                    snd.stop()
+                snd.play()
+            # Spawn a muzzle flash where the bullet is 
+            MuzzleFlash(self.game, pos)
 
-            
+    def hit(self):
+        self.damaged = True 
+        self.damage_alpha = chain(DAMAGE_ALPHA * 2)
+   
     def update(self):
         self.get_keys()
         # Update rotation - If rotate 360, change it back to 1
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
         # Rotate the image - we have to keep track of new rect
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
+        if self.damaged:
+            # add a blood effect when damaged
+            # Use itertools to create shading effect
+            try:
+                self.image.fill((255,0,0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
+            except:
+                self.damaged = False
         # new rectangle 
         self.rect = self.image.get_rect()
         self.rect.center = self.pos 
@@ -98,7 +119,6 @@ class Player(pg.sprite.Sprite):
         self.health += amount 
         if self.health > PLAYER_HEALTH: 
             self.health = PLAYER_HEALTH
-
 
 class Mob(pg.sprite.Sprite):
     def __init__(self, game, x, y):
@@ -149,6 +169,7 @@ class Mob(pg.sprite.Sprite):
         if self.health <= 0:
             choice(self.game.zombie_hit_sounds).play()
             self.kill()
+            self.game.map_img.blit(self.game.splat, self.pos - vec(32,32))
 
     def draw_health(self):
         if self.health > 60:
@@ -168,16 +189,16 @@ class Bullet(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game 
-        self.image = game.bullet_img
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         # Position that is passed in
         self.pos = vec(pos)
         self.rect.center = pos 
         # Define the bullet spread 
-        spread = uniform(-GUN_SPREAD,GUN_SPREAD)
+        # spread = uniform(-GUN_SPREAD,GUN_SPREAD)
         # Direction vector * Bullet speed defines bullet direction 
-        self.vel = direc.rotate(spread) * BULLET_SPEED
+        self.vel = direc * WEAPONS[game.player.weapon]['bullet-speed']* uniform(0.9, 1.1)
         # track spawn time to delete bullet 
         self.spawn_time = pg.time.get_ticks()
     
@@ -186,7 +207,7 @@ class Bullet(pg.sprite.Sprite):
         self.rect.center = self.pos 
         if pg.sprite.spritecollideany(self, self.game.walls):
             self.kill()
-        if pg.time.get_ticks() - self.spawn_time > BULLET_LIFETIME:
+        if pg.time.get_ticks() - self.spawn_time > WEAPONS[self.game.player.weapon]['bullet-lifetime']:
             # Pygame module kill deletes the sprite 
             self.kill()
 
