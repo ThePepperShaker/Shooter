@@ -78,7 +78,7 @@ class Player(pg.sprite.Sprite):
             self.vel = vec(-WEAPONS[self.weapon]['kickback'], 0).rotate(-self.rot)
             for i in range(WEAPONS[self.weapon]['bullet_count']):
                 spread = uniform(-WEAPONS[self.weapon]['spread'],WEAPONS[self.weapon]['spread'])
-                Bullet(self.game, pos, direc.rotate(spread))
+                Bullet(self.game, pos, direc.rotate(spread), WEAPONS[self.weapon]['damage'])
                 snd = choice(self.game.weapon_sounds[self.weapon])
                 if snd.get_num_channels() > 2:
                     snd.stop()
@@ -184,7 +184,7 @@ class Mob(pg.sprite.Sprite):
             pg.draw.rect(self.image, col, self.health_bar)
 
 class Bullet(pg.sprite.Sprite):
-    def __init__(self, game, pos, direc):
+    def __init__(self, game, pos, direc, damage):
         self._layer = BULLET_LAYER
         self.groups = game.all_sprites, game.bullets
         pg.sprite.Sprite.__init__(self, self.groups)
@@ -201,6 +201,7 @@ class Bullet(pg.sprite.Sprite):
         self.vel = direc * WEAPONS[game.player.weapon]['bullet-speed']* uniform(0.9, 1.1)
         # track spawn time to delete bullet 
         self.spawn_time = pg.time.get_ticks()
+        self.damage = damage
     
     def update(self):
         self.pos += self.vel * self.game.dt 
